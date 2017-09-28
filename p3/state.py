@@ -463,6 +463,9 @@ class ActionState(enum.Enum):
     ThrownKirbyDrinkSShot   = 0x017D
     ThrownKirbySpitSShot    = 0x017E
     Unselected              = 0x8000
+    
+    def __str__(self):
+        return '%s' % self._value_
 
 @enum.unique
 class BodyState(enum.Enum):
