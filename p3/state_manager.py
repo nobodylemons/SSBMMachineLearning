@@ -64,6 +64,7 @@ class StateManager:
         self.addresses['804D7420'] = int_handler(self.state, 'frame')
         self.addresses['80479D30'] = int_handler(self.state, 'menu', 0, 0xFF, Menu, Menu.Characters)
         self.addresses['804D6CAC'] = int_handler(self.state, 'stage', 8, 0xFF, Stage, Stage.Unselected)
+        
 
         self.state.players = []
         for player_id in range(4):
@@ -71,9 +72,11 @@ class StateManager:
             self.state.players.append(player)
 
             self.addresses[add_address('8045310C', 0xE90 * player_id)] = int_handler(player, 'stocks', 8, 0xFF)
-
-            cursor_x_address = add_address('81118DEC', -0xB80 * player_id)
-            cursor_y_address = add_address('81118DF0', -0xB80 * player_id)
+            self.addresses[add_address('8045310A', 0xE90 * player_id)] = int_handler(player, 'sd', 0, 0xFFFF)
+            
+            cursor_address = add_address('804A0BC0', 4* player_id)
+            cursor_x_address = cursor_address + ' ' + 'C'
+            cursor_y_address = cursor_address + ' ' + '10'
             self.addresses[cursor_x_address] = float_handler(player, 'cursor_x')
             self.addresses[cursor_y_address] = float_handler(player, 'cursor_y')
 
@@ -98,6 +101,10 @@ class StateManager:
             self.addresses[data_pointer + ' 19C8'] = int_handler(player, 'jumps_used', 0, 0xFF)
             self.addresses[data_pointer + ' 19EC'] = int_handler(player, 'body_state', 0, 0xFF, BodyState, BodyState.Normal)
 
+#             self_destruct_pointer = add_address('8046B6A0', 0xE*player_id)
+#             self.addresses[self_destruct_pointer + ' 24D4'] = int_handler(player, 'sd', 0 , 0xFF)
+            
+            
 
     def handle(self, address, value):
         """Convert the raw address and value into changes in the State."""
