@@ -1,7 +1,6 @@
 import subprocess
 import time
-import _thread
-import traceback
+import melee
 import os
 import p3.fox
 import p3.memory_watcher
@@ -10,6 +9,7 @@ import p3.pad
 import p3.state
 import p3.state_manager
 import p3.stats
+import p3.dolphin
 from numpy.lib.function_base import average
 
 
@@ -99,20 +99,8 @@ def make_action(state, pads, mm, fox, locations):
                 m.press_start_lots(state, pad)
 
 
+
 def main():
-    locations = {}
-    run_threads(locations)
-#     locations = {}
-#     for _ in range(2):
-#         try:
-#             _thread.start_new_thread(run_threads, (locations,))
-#         except:
-#             print("Give up")
-#     while 1:
-#         pass
-
-
-def run_threads(locations):
     dolphin_dir = find_dolphin_dir()
     if dolphin_dir is None:
         print('Could not find dolphin config dir.')
@@ -120,19 +108,27 @@ def run_threads(locations):
     state = p3.state.State()
     sm = p3.state_manager.StateManager(state)
     write_locations(dolphin_dir, sm.locations())
-
     stats = p3.stats.Stats()
-    
-    
     try:
-        subprocess.Popen(['/Applications/Dolphin.app/Contents/MacOS/Dolphin','--exec=/Users/Robert/Documents/docker/smash/20XX.iso'])
+        #subprocess.Popen(['/Applications/Dolphin.app/Contents/MacOS/Dolphin','--exec=/Users/Robert/Documents/docker/smash/20XX.iso'])
+        #subprocess.Popen(['/Applications/Dolphin.app/Contents/MacOS/Dolphin','--exec=/Users/Robert/Documents/docker/smash/20XX.iso'])
+        dolphin = p3.dolphin.Dolphin()
+        dolphin.run(iso_path="/Users/Robert/Documents/docker/smash/20XX.iso")
+        
         mw_path = dolphin_dir + '/MemoryWatcher/MemoryWatcher'
-
-        with p3.pad.Pad(dolphin_dir + '/Pipes/p3') as pad3,  p3.pad.Pad(dolphin_dir + '/Pipes/p1') as pad1, p3.pad.Pad(dolphin_dir + '/Pipes/p4') as pad4, p3.pad.Pad(dolphin_dir + '/Pipes/p2') as pad2, p3.memory_watcher.MemoryWatcher(mw_path) as mw:
+        
+        
+        with p3.memory_watcher.MemoryWatcher(mw_path) as mw, \
+            p3.pad.Pad(dolphin.pads[0]) as pad1, \
+            p3.pad.Pad(dolphin.pads[1]) as pad2, \
+            p3.pad.Pad(dolphin.pads[2]) as pad3, \
+            p3.pad.Pad(dolphin.pads[3]) as pad4:
+             
             fox = []
             for _ in range(0,4):
                 fox.append(p3.fox.Fox())
-            run(fox=fox, state=state, sm=sm, mw=mw, pads=[pad1, pad2, pad3, pad4], stats=stats, locations=locations)
+                 
+            run(fox=fox, state=state, sm=sm, mw=mw, pads=[pad1, pad2, pad3, pad4], stats=stats, locations={})
         
     except KeyboardInterrupt:
         print('Stopped')

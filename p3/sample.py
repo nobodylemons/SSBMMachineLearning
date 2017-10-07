@@ -19,21 +19,30 @@ class sample(object):
         #Each resulting state associated with an action will have a counter
         self.states_I_point_to = []
         self.states_that_point_to_me = []
-        self.v = 0
+        self.q = 0
         for _ in function_names:
             self.states_I_point_to.append(0)
+            self.states_that_point_to_me.append(0)
             
     def increment_action_taken(self, action_num, state_location):
+        self.states_I_point_to = self.increment(action_num, state_location, self.states_I_point_to)
+                
+    def increment_old_action(self, action_num, state_location):
+        self.states_that_point_to_me = self.increment(action_num, state_location, self.states_that_point_to_me)
+        
+    def increment(self, action_num, state_location, states):
         loc_str = ''
         for my_str in state_location:
             loc_str = loc_str +',' +my_str
-        if self.states_I_point_to[action_num] == 0:
+        loc_str = loc_str[1:loc_str.__len__()]
+        if states[action_num] == 0:
             locations = {}
             locations[loc_str] = 1
-            self.states_I_point_to[action_num] = locations
+            states[action_num] = locations
         else:
-            locations = self.states_I_point_to[action_num]
+            locations = states[action_num]
             if locations.__contains__(loc_str):
                 locations[loc_str] = locations[loc_str] + 1
             else:
                 locations[loc_str] = 1
+        return states

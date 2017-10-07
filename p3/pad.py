@@ -33,7 +33,8 @@ class Pad:
         self.pipe = None
         self.path = path
         try:
-            os.mkfifo(self.path)
+            if not os.path.exists(path):
+                os.mkfifo(self.path)
         except OSError:
             pass
 

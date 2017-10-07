@@ -64,8 +64,6 @@ class Fox:
         '%(pl_action_state)x' % {"pl_action_state": int(str(pl_action_state))}, \
         '%(rad_distance)s' % {"rad_distance": radial_distance}, \
         '%(op_action_state)x' % {"op_action_state": int(str(op_action_state))}, \
-        '%(op_vel_x)s' % {"op_vel_x": int(op_vel_x)}, \
-        '%(op_vel_y)s' % {"op_vel_y": int(op_vel_y)}, \
         '%(op_percent)s' % {"op_percent": int(op_percent/10)}, \
         '%(op_facing)s' % {"op_facing": op_facing}, \
         '%(angle)s' % {"angle": int(angle/36)*36}])
@@ -77,17 +75,21 @@ class Fox:
             reward = -2
             self.reward = self.reward + -1/self.frame_counter
         elif state.players[opponent_num].action_state is p3.state.ActionState.DeadDown and self.op_action_state is not p3.state.ActionState.DeadDown:
-            reward = 1
+            reward = 1.5
             self.reward = self.reward + 1/self.frame_counter
         elif state.players[player_num].action_state is p3.state.ActionState.DeadDown and self.pl_action_state is not p3.state.ActionState.DeadDown:
             reward = -1
             self.reward = self.reward + -1/self.frame_counter
         else:
-            opponent_damage_given = state.players[1].percent - self.opponent_percent
-            player_damage_taken = state.players[2].percent - self.player_percent
-            percentModifier = (opponent_damage_given - player_damage_taken)/150
-            reward = reward + percentModifier
-            self.reward = self.reward + reward/self.frame_counter
+            opponent_damage_given = state.players[opponent_num].percent - self.opponent_percent
+            player_damage_taken = state.players[player_num].percent - self.player_percent
+            percentModifier = (1.5*opponent_damage_given - player_damage_taken)/150
+            if reward == 0:
+                reward = -.01
+                self.reward = self.reward + reward/self.frame_counter
+            else:
+                reward = percentModifier
+                self.reward = self.reward + reward/self.frame_counter
         return reward
 
 
@@ -121,7 +123,10 @@ class Fox:
                     func(*args)
                 self.last_action = state.frame
         else:
-            
+            if state.frame % 1000 == 0 and state.frame <= 100000:
+                print(state.frame)
+            if state.frame > 100000 and state.frame % 1000 == 0:
+                print(self.locations.size)
             if self.first_round:
                 self.performAction(pad, self.action_of_last_state)
                 self.first_round = False
@@ -131,7 +136,7 @@ class Fox:
                           
                 instantaneous_reward = self.determine_reward(state, player_num, opponent_num)
                 
-                self.update_nearest_neighbors(old_location_str_arr)
+#                 self.update_nearest_neighbors(old_location_str_arr)
                 
                 self.update_data(state, player_num, opponent_num)
                 
@@ -144,26 +149,28 @@ class Fox:
                     self.locations.add(new_loc_str_arr, p3.sample.sample())
                 
                 new_sample = self.locations.get(new_loc_str_arr)
+                
+                new_sample.increment_old_action(self.action_of_last_state, old_location_str_arr)
+                
                 alpha = .1
                 if instantaneous_reward == -2:
-                    self.sd_update_v(old_location_str_arr, alpha)
+                    self.sd_update_q(old_location_str_arr, alpha)
                 else:
-                    self.update_v(old_sample, instantaneous_reward, [], alpha)
-                new_sample.states_that_point_to_me.append(old_location_str_arr)
+                    self.update_q(old_sample, instantaneous_reward, [], alpha)
                 best_action_num = self.find_best_action(new_sample)
                 self.performAction(pad, best_action_num)
                 self.action_of_last_state = best_action_num
         return self.locations
           
-    def sd_update_v(self, loc_str_array, alpha):
-        num_ignored_attributes = 8
+    def sd_update_q(self, loc_str_array, alpha):
+        num_ignored_attributes = 5
         pl_loc_array = loc_str_array[0: loc_str_array.__len__()-num_ignored_attributes]
         pl_map_tree = self.locations.get(pl_loc_array)
         self.recurse_me(alpha, pl_map_tree)
         
     def recurse_me(self, alpha, pl_map_tree):
         if type(pl_map_tree) is p3.sample.sample:
-            self.update_v(pl_map_tree, -1, [], alpha)
+            self.update_q(pl_map_tree, -1, [], alpha)
         else:
             for map_tree in pl_map_tree.keys():
                 self.recurse_me(alpha, pl_map_tree[map_tree])
@@ -180,31 +187,34 @@ class Fox:
                     done_key = old_location_str_arr[old_location_str_arr.__len__()-1]
                     if second_key is not done_key:
                         obj = nearest_neighbors[key][second_key]
-                        obj.v = .9*obj.v + .1*self.locations.get(old_location_str_arr).v 
+                        obj.q = .9*obj.q + .1*self.locations.get(old_location_str_arr).q 
                 
     
-    def update_v(self, last_sample, reward, covered_states, alpha):
-        #for every state that points to me
-        for loc_str in last_sample.states_that_point_to_me:
-            #If I haven't already updated the state
-            if not covered_states.__contains__(loc_str) and covered_states.__len__()<100:
-                #say that I updated the state
-                covered_states.append(loc_str)
-                #sample that points to me
-                old_sample = self.locations.get(loc_str)
-                old_sample.v = old_sample.v + alpha*(reward+.9*last_sample.v - old_sample.v)
-                self.update_v(old_sample, reward, covered_states, alpha)
+    def update_q(self, last_sample, reward, covered_states, alpha):
+        for action in range(0,last_sample.states_that_point_to_me.__len__()):
+            locations_map = last_sample.states_that_point_to_me[action]
+            if locations_map is not 0:
+                for location in locations_map.keys():
+                    if not covered_states.__contains__(location):
+                        covered_states.append(location)
+                        loc_arr = location.split(',')
+                        if loc_arr[0]=='':
+                            loc_arr.pop(0)
+                        if not loc_arr[3] is int(str(p3.state.ActionState.DeadDown)) and not loc_arr[5] is int(str(p3.state.ActionState.DeadDown)):
+                            old_sample = self.locations.get(loc_arr)
+                            old_sample.q = old_sample.q + alpha*(reward+.9*last_sample.q - old_sample.q)
+                            self.update_q(old_sample, reward, covered_states, alpha)
         
     
     def find_best_action(self, sample):
-        if self.count > .1:
+        if self.count > .0001:
             self.count = self.count*.99#.9999999
         #return best action number for sample to take
-        if random.random() < self.count: #and self.locations.size<50000:
+        if random.random() < self.count:
             return random.randint( 0, self.a.__len__()-1 )
         
         best_action = 0
-        max_weighted_v = -10000;
+        max_weighted_q = -10000;
         
         #every action has a locations_map with many possible states
         for action in range(0,sample.states_I_point_to.__len__()):
@@ -218,14 +228,14 @@ class Fox:
                     loc_arr = location.split(',')
                     if loc_arr[0]=='':
                         loc_arr.pop(0)
-                    v = self.locations.get(loc_arr).v
-                    factor_total = factor_total + v*locations_map[location]
+                    q = self.locations.get(loc_arr).q
+                    factor_total = factor_total + q*locations_map[location]
                 
-                weighted_v = factor_total/total
-                if weighted_v > max_weighted_v:
-                    max_weighted_v = weighted_v
+                weighted_q = factor_total/total
+                if weighted_q > max_weighted_q:
+                    max_weighted_q = weighted_q
                     best_action = action
-        if max_weighted_v == -10000:
+        if max_weighted_q == -10000:
             return random.randint( 0, self.a.__len__()-1 )
         return best_action
         

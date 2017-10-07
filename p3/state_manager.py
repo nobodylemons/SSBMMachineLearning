@@ -108,6 +108,7 @@ class StateManager:
 
     def handle(self, address, value):
         """Convert the raw address and value into changes in the State."""
+        
         assert address in self.addresses
         handlers = self.addresses[address]
         if isinstance(handlers, list):
