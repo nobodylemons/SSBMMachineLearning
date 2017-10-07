@@ -200,15 +200,15 @@ class Fox:
                         loc_arr = location.split(',')
                         if loc_arr[0]=='':
                             loc_arr.pop(0)
-                        if not loc_arr[3] is int(str(p3.state.ActionState.DeadDown)) and not loc_arr[5] is int(str(p3.state.ActionState.DeadDown)):
+                        if not loc_arr[3] is int(str(p3.state.ActionState.DeadDown)) and not loc_arr[5] is int(str(p3.state.ActionState.DeadDown)) and covered_states.__len__()<700:
                             old_sample = self.locations.get(loc_arr)
                             old_sample.q = old_sample.q + alpha*(reward+.9*last_sample.q - old_sample.q)
                             self.update_q(old_sample, reward, covered_states, alpha)
         
     
     def find_best_action(self, sample):
-        if self.count > .0001:
-            self.count = self.count*.99#.9999999
+        if self.count > .001:
+            self.count = self.count*.999999
         #return best action number for sample to take
         if random.random() < self.count:
             return random.randint( 0, self.a.__len__()-1 )
