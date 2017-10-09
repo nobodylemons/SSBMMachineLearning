@@ -55,57 +55,53 @@ class Dolphin:
         section = "GCPad" + str(port)
         if not config.has_section(section):
             config.add_section(section)
-
-        if controllertype == enums.ControllerType.STANDARD:
-            pipe_slot = str(port-1)
-            config.set(section, 'Device', 'Pipe/'+pipe_slot+'/Bot' + str(port))
-            config.set(section, 'Buttons/A', '\'Button A\'')
-            config.set(section, 'Buttons/B', '\'Button B\'')
-            config.set(section, 'Buttons/X', '\'Button X\'')
-            config.set(section, 'Buttons/Y', '\'Button Y\'')
-            config.set(section, 'Buttons/Z', '\'Button Z\'')
-            config.set(section, 'Buttons/L', '\'Button L\'')
-            config.set(section, 'Buttons/R', '\'Button R\'')
-            config.set(section, 'Main Stick/Up', '\'Axis MAIN Y +\'')
-            config.set(section, 'Main Stick/Down', '\'Axis MAIN Y -\'')
-            config.set(section, 'Main Stick/Left', '\'Axis MAIN X -\'')
-            config.set(section, 'Main Stick/Right', '\'Axis MAIN X +\'')
-            config.set(section, 'Triggers/L', '\'Button L\'')
-            config.set(section, 'Triggers/R', '\'Button R\'')
-            config.set(section, 'Main Stick/Modifier', 'Shift_L')
-            config.set(section, 'Main Stick/Modifier/Range', '50.000000000000000')
-            config.set(section, 'D-Pad/Up', '\'T\'')
-            config.set(section, 'D-Pad/Down', '\'G\'')
-            config.set(section, 'D-Pad/Left', '\'F\'')
-            config.set(section, 'D-Pad/Right', '\'H\'')
-            config.set(section, 'Buttons/Start', '\'Button START\'')
-            config.set(section, 'Buttons/A', '\'Button A\'')
-            config.set(section, 'C-Stick/Up', '\'Axis C Y +\'')
-            config.set(section, 'C-Stick/Down', '\'Axis C Y -\'')
-            config.set(section, 'C-Stick/Left', '\'Axis C X -\'')
-            config.set(section, 'C-Stick/Right', '\'Axis C X +\'')
-            config.set(section, 'Triggers/L-Analog', '\'Axis L -+\'')
-            config.set(section, 'Triggers/R-Analog', '\'Axis R -+\'')
-        #This section is unused if it's not a standard input (I think...)
-        else:
-            config.set(section, 'Device', 'XInput2/0/Virtual core pointer')
-
+        
+        path = os.path.dirname(os.path.realpath(__file__))
+        shutil.copy(path + "/GCPadNew.ini", self.get_dolphin_config_path())
+        
+#         if controllertype == enums.ControllerType.STANDARD:
+#             pipe_slot = str(port-1)
+#             config.set(section, 'Device', 'Pipe/'+pipe_slot+'/Bot' + str(port))
+#             config.set(section, 'Buttons/A', '\'Button A\'')
+#             config.set(section, 'Buttons/B', '\'Button B\'')
+#             config.set(section, 'Buttons/X', '\'Button X\'')
+#             config.set(section, 'Buttons/Y', '\'Button Y\'')
+#             config.set(section, 'Buttons/Z', '\'Button Z\'')
+#             config.set(section, 'Buttons/Start', '\'Button START\'')
+#             config.set(section, 'D-Pad/Up', '\'Button D_UP\'')
+#             config.set(section, 'D-Pad/Down', '\'Button D_DOWN\'')
+#             config.set(section, 'D-Pad/Left', '\'Button D_LEFT\'')
+#             config.set(section, 'D-Pad/Right', '\'Button D_RIGHT\'')
+#             config.set(section, 'Triggers/L', '\'Button L\'')
+#             config.set(section, 'Triggers/R', '\'Button R\'')
+#             config.set(section, 'Main Stick/Up', '\'Axis MAIN Y +\'')
+#             config.set(section, 'Main Stick/Down', '\'Axis MAIN Y -\'')
+#             config.set(section, 'Main Stick/Left', '\'Axis MAIN X -\'')
+#             config.set(section, 'Main Stick/Right', '\'Axis MAIN X +\'')
+#             config.set(section, 'C-Stick/Up', '\'Axis C Y +\'')
+#             config.set(section, 'C-Stick/Down', '\'Axis C Y -\'')
+#             config.set(section, 'C-Stick/Left', '\'Axis C X -\'')
+#             config.set(section, 'C-Stick/Right', '\'Axis C X +\'')
+#         #This section is unused if it's not a standard input (I think...)
+#         else:
+#             config.set(section, 'Device', 'XInput2/0/Virtual core pointer')
+# 
 #         with open(controller_config_path, 'w') as configfile:
 #             config.write(configfile)
-
-        #Change the bot's controller port to use "standard" input
-        dolphinn_config_path = self.get_dolphin_config_path() + "Dolphin.ini"
-        config = configparser.SafeConfigParser()
-        config.read(dolphinn_config_path)
-        #Indexed at 0. "6" means standard controller, "12" means GCN Adapter
-        # The enum is scoped to the proper value, here
-        config.set("Core", 'SIDevice'+str(port-1), controllertype.value)
-        #Enable Cheats
-        config.set("Core", 'enablecheats', "True")
-        #Turn on background input so we don't need to have window focus on dolphin
-        config.set("Input", 'backgroundinput', "True")
-        with open(dolphinn_config_path, 'w') as dolphinfile:
-            config.write(dolphinfile)
+        
+#         #Change the bot's controller port to use "standard" input
+#         dolphinn_config_path = self.get_dolphin_config_path() + "Dolphin.ini"
+#         config = configparser.SafeConfigParser()
+#         config.read(dolphinn_config_path)
+#         #Indexed at 0. "6" means standard controller, "12" means GCN Adapter
+#         # The enum is scoped to the proper value, here
+#         config.set("Core", 'SIDevice'+str(port-1), controllertype.value)
+#         #Enable Cheats
+#         config.set("Core", 'enablecheats', "True")
+#         #Turn on background input so we don't need to have window focus on dolphin
+#         config.set("Input", 'backgroundinput', "True")
+#         with open(dolphinn_config_path, 'w') as dolphinfile:
+#             config.write(dolphinfile)
 
         #Enable the specific cheats we need (Netplay community settings)
 #         melee_config_path = self.get_dolphin_home_path() + "/GameSettings/GALE01.ini"
@@ -119,9 +115,12 @@ class Dolphin:
 #             config.write(dolphinfile)
 
     """Run dolphin-emu"""
-    def run(self, render=True, iso_path=None, movie_path=None):
-#         command = ["dolphin-emu"]
-        command = ["/Applications/Dolphin.app/Contents/MacOS/Dolphin"]
+    def run(self, render=True, iso_path=None, movie_path=None, debug=False):
+        if os.path.isdir('/Applications/Dolphin.app/Contents/MacOS'):
+            command = ["/Applications/Dolphin.app/Contents/MacOS/Dolphin"]
+        else:
+            command = ["dolphin-emu"]
+        
         if not render:
             #Use the "Null" renderer
             command.append("-v")
@@ -132,7 +131,10 @@ class Dolphin:
         if iso_path != None:
             command.append("-e")
             command.append(iso_path)
+        if debug:
+            command.append("-d")
         self.process = subprocess.Popen(command)
+        
 
     """Terminate the dolphin process"""
     def terminate(self):
@@ -141,7 +143,10 @@ class Dolphin:
 
     """Return the path to dolphin's home directory"""
     def get_dolphin_home_path(self):
-        home_path = pwd.getpwuid(os.getuid()).pw_dir
+        if os.path.isdir("/Applications"):
+            home_path = pwd.getpwuid(os.getuid()).pw_dir
+        else:
+            home_path = "/usr"
         legacy_config_path = home_path + "/.dolphin-emu/";
 
         #Are we using a legacy Linux home path directory?
@@ -154,7 +159,7 @@ class Dolphin:
             return osx_path
 
         #Are we on a new Linux distro?
-        linux_path = home_path + "/.local/share/dolphin-emu/";
+        linux_path = home_path + "/local/share/dolphin-emu/sys/";
         if os.path.isdir(linux_path):
             return linux_path
 
@@ -174,7 +179,7 @@ class Dolphin:
             return legacy_config_path
 
         #Are we on a new Linux distro?
-        linux_path = home_path + "/.config/dolphin-emu/";
+        linux_path = "/usr/local/share/dolphin-emu/sys/GameSettings/";
         if os.path.isdir(linux_path):
             return linux_path
 

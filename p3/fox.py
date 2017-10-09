@@ -1,11 +1,9 @@
 from __future__ import generators
-import p3.pad
 import p3.actions
 import p3.sample
 import random
 import math
-from p3 import location_structure
-
+import p3.location_structure
 
 class Fox:
     def __init__(self):
@@ -20,8 +18,8 @@ class Fox:
         self.pl_action_state, self.op_action_state = 0, 0
         self.op_vel_x, self.op_vel_y = 0,0
         self.sd = 0
+        self.total_sds = 0
         self.reward = 0
-        self.frame_counter = 1
         location_str_arr = self.get_location_str_arr(self.op_x, self.op_y, self.pl_x, self.pl_y, self.pl_facing, self.op_facing, self.opponent_percent, self.op_action_state, self.pl_action_state, self.op_vel_x, self.op_vel_y)
         self.locations.add(location_str_arr, p3.sample.sample())
 #         self.locations_len = self.locations.__len__()
@@ -72,24 +70,25 @@ class Fox:
     def determine_reward(self, state, player_num, opponent_num):
         reward = 0
         if state.players[player_num].sd > self.sd:
+            self.total_sds = self.total_sds + 1
             reward = -2
-            self.reward = self.reward + -1/self.frame_counter
+            self.reward = self.reward + -1
         elif state.players[opponent_num].action_state is p3.state.ActionState.DeadDown and self.op_action_state is not p3.state.ActionState.DeadDown:
             reward = 1.5
-            self.reward = self.reward + 1/self.frame_counter
+            self.reward = self.reward + 1
         elif state.players[player_num].action_state is p3.state.ActionState.DeadDown and self.pl_action_state is not p3.state.ActionState.DeadDown:
             reward = -1
-            self.reward = self.reward + -1/self.frame_counter
+            self.reward = self.reward + -1
         else:
             opponent_damage_given = state.players[opponent_num].percent - self.opponent_percent
             player_damage_taken = state.players[player_num].percent - self.player_percent
             percentModifier = (1.5*opponent_damage_given - player_damage_taken)/150
             if reward == 0:
                 reward = -.01
-                self.reward = self.reward + reward/self.frame_counter
+                self.reward = self.reward + reward
             else:
                 reward = percentModifier
-                self.reward = self.reward + reward/self.frame_counter
+                self.reward = self.reward + reward
         return reward
 
 
@@ -110,7 +109,6 @@ class Fox:
         self.sd = state.players[player_num].sd
 
     def advance(self, state, pad, player_num, opponent_num, locations):
-        self.frame_counter = self.frame_counter + 1
         if not locations == {} and not locations is None:
             self.locations = locations
         while self.action_list:
@@ -123,10 +121,6 @@ class Fox:
                     func(*args)
                 self.last_action = state.frame
         else:
-            if state.frame % 1000 == 0 and state.frame <= 100000:
-                print(state.frame)
-            if state.frame > 100000 and state.frame % 1000 == 0:
-                print(self.locations.size)
             if self.first_round:
                 self.performAction(pad, self.action_of_last_state)
                 self.first_round = False
@@ -200,7 +194,7 @@ class Fox:
                         loc_arr = location.split(',')
                         if loc_arr[0]=='':
                             loc_arr.pop(0)
-                        if not loc_arr[3] is int(str(p3.state.ActionState.DeadDown)) and not loc_arr[5] is int(str(p3.state.ActionState.DeadDown)) and covered_states.__len__()<700:
+                        if not loc_arr[3] is int(str(p3.state.ActionState.DeadDown)) and not loc_arr[5] is int(str(p3.state.ActionState.DeadDown)) and covered_states.__len__()<500:
                             old_sample = self.locations.get(loc_arr)
                             old_sample.q = old_sample.q + alpha*(reward+.9*last_sample.q - old_sample.q)
                             self.update_q(old_sample, reward, covered_states, alpha)

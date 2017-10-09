@@ -77,3 +77,9 @@ class Pad:
             self.press_trigger(trigger, 0)
         for stick in Stick:
             self.tilt_stick(stick, 0.5, 0.5)
+    
+    def frame_advance_press(self):
+        self.pipe.write('PRESS F10')
+    
+    def frame_advance_release(self):
+        self.pipe.write('RELEASE F10')

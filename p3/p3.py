@@ -1,6 +1,5 @@
-import subprocess
 import time
-import melee
+import csv
 import os
 import p3.fox
 import p3.memory_watcher
@@ -10,12 +9,11 @@ import p3.state
 import p3.state_manager
 import p3.stats
 import p3.dolphin
-from numpy.lib.function_base import average
 
 
 def find_dolphin_dir():
     """Attempts to find the dolphin user directory. None on failure."""
-    candidates = ['~/.dolphin-emu','~/Library/Application Support/Dolphin']
+    candidates = ['~/.dolphin-emu','~/Library/Application Support/Dolphin', '/usr/local/share/dolphin-emu/sys']
     for candidate in candidates:
         path = os.path.expanduser(candidate)
         if os.path.isdir(path):
@@ -36,11 +34,14 @@ def write_locations(dolphin_dir, locations):
 def run(fox, state, sm, mw, pads, stats, locations):
     mm = []
     for _ in range(0,4):
+        """Menu manager is the object used to select characters and set dual 1v1 fighting mode"""
         mm.append(p3.menu_manager.MenuManager())
 
     while True:
+        pads[0].frame_advance_press()
         last_frame = state.frame
         res = next(mw)
+        print(state.frame - last_frame)
         if res is not None:
             sm.handle(*res)
         if state.frame > last_frame:
@@ -48,6 +49,7 @@ def run(fox, state, sm, mw, pads, stats, locations):
             start = time.time()
             make_action(state, pads, mm, fox, locations)
             stats.add_thinking_time(time.time() - start)
+        pads[0].frame_advance_release()
 
 def make_action(state, pads, mm, fox, locations):
     if state.menu == p3.state.Menu.Game:
@@ -58,11 +60,22 @@ def make_action(state, pads, mm, fox, locations):
         locations = fox[3].advance(state=state, pad=pads[3], player_num=3, opponent_num=2, locations=locations)
         if state.frame % 1000 == 0:
             average_reward = 0
+            distinct_states = 0
+            sds = 0
+            epsilon = 0
             for singlefox in fox:
                 average_reward = average_reward + (singlefox.reward/4)
+                distinct_states = singlefox.locations.size
+                sds = sds + singlefox.total_sds
+                epsilon = singlefox.count
                 singlefox.reward = 0
-                singlefox.frame_counter = 1
-            print(str(average_reward))
+                singlefox.total_sds = 0
+#           ['Frame Number']+['Distinct States']+['Average Reward']+['SDs per 1000 States']+['Epsilon']
+            path = os.path.dirname(os.path.realpath(__file__)) + "/stats.csv"
+            with open(path, 'a', newline='') as csvfile:
+                writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+                writer.writerow([state.frame]+[distinct_states]+[average_reward/1000]+[sds]+[epsilon])
+                csvfile.close()
     elif state.menu == p3.state.Menu.Characters:
         if mm[0].dual_1v1_ready == False:
             mm[0].set_dual_1v1(state, pads[0])
@@ -101,6 +114,7 @@ def make_action(state, pads, mm, fox, locations):
 
 
 def main():
+    dolphin = p3.dolphin.Dolphin()
     dolphin_dir = find_dolphin_dir()
     if dolphin_dir is None:
         print('Could not find dolphin config dir.')
@@ -110,20 +124,23 @@ def main():
     write_locations(dolphin_dir, sm.locations())
     stats = p3.stats.Stats()
     try:
-        #subprocess.Popen(['/Applications/Dolphin.app/Contents/MacOS/Dolphin','--exec=/Users/Robert/Documents/docker/smash/20XX.iso'])
-        #subprocess.Popen(['/Applications/Dolphin.app/Contents/MacOS/Dolphin','--exec=/Users/Robert/Documents/docker/smash/20XX.iso'])
-        dolphin = p3.dolphin.Dolphin()
-        dolphin.run(iso_path="/Users/Robert/Documents/docker/smash/20XX.iso")
+        if os.path.isdir("/Users/Robert/Documents/docker/smash"):
+            dolphin.run(iso_path="/Users/Robert/Documents/docker/smash/20XX.iso", render=False, debug=True)
+        else:
+            dolphin.run(iso_path="/home/20XX.iso", render=False)
         
         mw_path = dolphin_dir + '/MemoryWatcher/MemoryWatcher'
-        
+        path = os.path.dirname(os.path.realpath(__file__)) + "/stats.csv"
         
         with p3.memory_watcher.MemoryWatcher(mw_path) as mw, \
             p3.pad.Pad(dolphin.pads[0]) as pad1, \
             p3.pad.Pad(dolphin.pads[1]) as pad2, \
             p3.pad.Pad(dolphin.pads[2]) as pad3, \
-            p3.pad.Pad(dolphin.pads[3]) as pad4:
-             
+            p3.pad.Pad(dolphin.pads[3]) as pad4, \
+            open(path, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+            writer.writerow(['Frame Number']+['Distinct States']+['Average Reward']+['SDs per 1000 States']+['Epsilon'])
+            csvfile.close()
             fox = []
             for _ in range(0,4):
                 fox.append(p3.fox.Fox())

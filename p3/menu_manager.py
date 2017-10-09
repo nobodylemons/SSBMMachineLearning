@@ -27,7 +27,6 @@ class MenuManager:
             target_y = 11.5
             dx = target_x - state.players[2].cursor_x
             dy = target_y - state.players[2].cursor_y
-            print(str(state.players[2].cursor_x)+','+str(state.players[2].cursor_y))
             mag = math.sqrt(dx * dx + dy * dy)
             if mag < 0.3:
                 pad.press_button(p3.pad.Button.A)
