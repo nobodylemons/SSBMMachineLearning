@@ -7,6 +7,7 @@ import p3.location_structure
 
 class Fox:
     def __init__(self):
+        self.actions_so_far = []
         self.action_list = []
         self.last_action = 0
         self.locations = p3.location_structure.LocationStruct()
@@ -54,6 +55,12 @@ class Fox:
         if distance_y<0:
             standard_distance_y = standard_distance_y*-1
 
+        if not self.actions_so_far.__contains__(int(str(pl_action_state))):
+            self.actions_so_far.append(int(str(pl_action_state)))
+            print(self.actions_so_far.__len__())
+        if not self.actions_so_far.__contains__(int(str(op_action_state))):
+            self.actions_so_far.append(int(str(op_action_state)))
+            print(self.actions_so_far.__len__())
         ret_str_arr = []
         ret_str_arr.extend([
         '%(pl_x)s' % {"pl_x": int(pl_x/20)}, \
@@ -64,7 +71,7 @@ class Fox:
         '%(op_action_state)x' % {"op_action_state": int(str(op_action_state))}, \
         '%(op_percent)s' % {"op_percent": int(op_percent/10)}, \
         '%(op_facing)s' % {"op_facing": op_facing}, \
-        '%(angle)s' % {"angle": int(angle/36)*36}])
+        '%(angle)s' % {"angle": int(angle/45)*45}])
         return ret_str_arr
 
     def determine_reward(self, state, player_num, opponent_num):
@@ -109,6 +116,7 @@ class Fox:
         self.sd = state.players[player_num].sd
 
     def advance(self, state, pad, player_num, opponent_num, locations):
+        print("We are running")
         if not locations == {} and not locations is None:
             self.locations = locations
         while self.action_list:
@@ -192,8 +200,6 @@ class Fox:
                     if not covered_states.__contains__(location):
                         covered_states.append(location)
                         loc_arr = location.split(',')
-                        if loc_arr[0]=='':
-                            loc_arr.pop(0)
                         if not loc_arr[3] is int(str(p3.state.ActionState.DeadDown)) and not loc_arr[5] is int(str(p3.state.ActionState.DeadDown)) and covered_states.__len__()<500:
                             old_sample = self.locations.get(loc_arr)
                             old_sample.q = old_sample.q + alpha*(reward+.9*last_sample.q - old_sample.q)
@@ -216,12 +222,9 @@ class Fox:
             if locations_map is not 0:
                 total = 0
                 factor_total = 0
-                    
                 for location in locations_map.keys():
                     total = total + locations_map[location]
                     loc_arr = location.split(',')
-                    if loc_arr[0]=='':
-                        loc_arr.pop(0)
                     q = self.locations.get(loc_arr).q
                     factor_total = factor_total + q*locations_map[location]
                 

@@ -9,6 +9,7 @@ import p3.state
 import p3.state_manager
 import p3.stats
 import p3.dolphin
+import subprocess
 
 
 def find_dolphin_dir():
@@ -38,10 +39,10 @@ def run(fox, state, sm, mw, pads, stats, locations):
         mm.append(p3.menu_manager.MenuManager())
 
     while True:
-        pads[0].frame_advance_press()
+#         pads[0].frame_advance_press()
         last_frame = state.frame
         res = next(mw)
-        print(state.frame - last_frame)
+#         print(state.frame - last_frame)
         if res is not None:
             sm.handle(*res)
         if state.frame > last_frame:
@@ -49,7 +50,7 @@ def run(fox, state, sm, mw, pads, stats, locations):
             start = time.time()
             make_action(state, pads, mm, fox, locations)
             stats.add_thinking_time(time.time() - start)
-        pads[0].frame_advance_release()
+#         pads[0].frame_advance_release()
 
 def make_action(state, pads, mm, fox, locations):
     if state.menu == p3.state.Menu.Game:
@@ -124,11 +125,11 @@ def main():
     write_locations(dolphin_dir, sm.locations())
     stats = p3.stats.Stats()
     try:
-        if os.path.isdir("/Users/Robert/Documents/docker/smash"):
-            dolphin.run(iso_path="/Users/Robert/Documents/docker/smash/20XX.iso", render=False, debug=True)
-        else:
-            dolphin.run(iso_path="/home/20XX.iso", render=False)
-        
+        print("dolphin-emu --exec=/home/20XX.iso")
+#         if os.path.isdir("/Users/Robert/Documents/docker/smash"):
+#             dolphin.run(iso_path="/Users/Robert/Documents/docker/smash/20XX.iso", render=False, debug=False)
+#         else:
+#             dolphin.run(iso_path="/home/20XX.iso", render=False, debug=False
         mw_path = dolphin_dir + '/MemoryWatcher/MemoryWatcher'
         path = os.path.dirname(os.path.realpath(__file__)) + "/stats.csv"
         

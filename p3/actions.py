@@ -3,29 +3,6 @@ import p3.pad
 from argparse import Action
 
 class Actions(object):
-#     def __init__(self):
-#         print()
-
-#     @enum.unique
-#     class Action(enum.Enum):
-#         LEFT_1 = 0
-#         LEFT_2 = 1
-#         LEFT_3 = 2
-#         RIGHT_1 = 3
-#         RIGHT_2 = 4
-#         RIGHT_3 = 5
-#         UP_1 = 6
-#         UP_2 = 7
-#         UP_3 = 8
-#         DOWN_1 = 9
-#         DOWN_2 = 10
-#         DOWN_3 = 11
-#         UP_LEFT = 12
-#         UP_RIGHT = 13
-#         DOWN_LEFT = 14
-#         DOWN_RIGHT = 15
-# 
-#         SHIELD_DROP = 16
 
     def left_1(self, pad, action_list):
         action_list.append((1, pad.tilt_stick, [p3.pad.Stick.MAIN, 0.067, 0.25]))
@@ -94,11 +71,6 @@ class Actions(object):
         action_list.append((1, pad.tilt_stick, [p3.pad.Stick.MAIN, 0.8535, .1464]))
         return action_list
     
-#         B_LEFT = 17
-#         B_RIGHT = 18
-#         B_UP = 19
-#         B_DOWN = 20
-#         B_NEUTRAL = 21
     def b_left(self, pad, action_list):
         action_list.append((0, pad.press_button, [p3.pad.Button.B]))
         action_list.append((0, pad.tilt_stick, [p3.pad.Stick.MAIN, 0.0, 0.5]))
@@ -128,16 +100,6 @@ class Actions(object):
         action_list.append((0, pad.tilt_stick, [p3.pad.Stick.MAIN, .5, 0.5]))
         action_list.append((1, pad.release_button, [p3.pad.Button.B]))
         return action_list
-    
-#         A_LEFT = 22
-#         A_RIGHT = 23
-#         A_UP = 24
-#         A_DOWN = 25
-#         A_NEUTRAL = 26
-#         A_UP_LEFT = 27
-#         A_UP_RIGHT = 28
-#         A_DOWN_LEFT = 29
-#         A_DOWN_RIGHT = 30
 
     def a_left(self, pad, action_list):
         action_list.append((0, pad.press_button, [p3.pad.Button.A]))
@@ -192,24 +154,6 @@ class Actions(object):
         action_list.append((0, pad.tilt_stick, [p3.pad.Stick.MAIN, 0.8535, .1464]))
         action_list.append((1, pad.release_button, [p3.pad.Button.A]))
         return action_list
-    
-#         DODGE_LEFT_1 = 31
-#         DODGE_LEFT_2 = 32
-#         DODGE_LEFT_3 = 33
-#         DODGE_RIGHT_1 = 34
-#         DODGE_RIGHT_2 = 35
-#         DODGE_RIGHT_3 = 36
-#         DODGE_UP_1 = 37
-#         DODGE_UP_2 = 38
-#         DODGE_UP_3 = 39
-#         DODGE_DOWN_1 = 40
-#         DODGE_DOWN_2 = 41
-#         DODGE_DOWN_3 = 42
-#         DODGE_UP_LEFT = 43
-#         DODGE_UP_RIGHT = 44
-#         DODGE_DOWN_LEFT = 45
-#         DODGE_DOWN_RIGHT = 46
-#         DODGE_NEUTRAL = 47
     
     def dodge_left_1(self, pad, action_list):
         action_list.append((0, pad.press_button, [p3.pad.Button.L]))
