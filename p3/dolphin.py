@@ -119,7 +119,7 @@ class Dolphin:
         if os.path.isdir('/Applications/Dolphin.app/Contents/MacOS'):
             command = ["/Applications/Dolphin.app/Contents/MacOS/Dolphin"]
         else:
-            command = ["dolphin-emu"]
+            command = ["dolphin-emu-headless"]
         
         if not render:
             #Use the "Null" renderer

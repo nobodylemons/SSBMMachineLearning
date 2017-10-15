@@ -13,6 +13,7 @@ class MenuManager:
         self.pressed_a = False
         self.changed_color = False
         self.pressed_start = False
+        self.changed_cpu = False
 
     def pick_fox(self, state, pad):
         if self.selected_fox:
@@ -48,8 +49,8 @@ class MenuManager:
         elif player_num == 1:
             #-10, -3.4
             self.changed_color = self.press_a(state, pad, player_num, self.changed_color, -10, -3.4)
-            
-#         print(str(state.players[1].cursor_x)+','+str(state.players[1].cursor_y))
+    def change_cpu(self, state, pad, player_num):
+        self.changed_cpu = self.press_a(state, pad, player_num, self.changed_color, -1.5, -2)
             
     def press_a(self, state, pad, player_num, self_bool, target_x, target_y):
         if self_bool:

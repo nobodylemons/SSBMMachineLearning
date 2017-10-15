@@ -9,7 +9,7 @@ import p3.state
 import p3.state_manager
 import p3.stats
 import p3.dolphin
-import subprocess
+import pickle
 
 
 def find_dolphin_dir():
@@ -34,22 +34,27 @@ def write_locations(dolphin_dir, locations):
 
 def run(fox, state, sm, mw, pads, stats, locations):
     mm = []
-    for _ in range(0,4):
+    for _ in range(4):
         """Menu manager is the object used to select characters and set dual 1v1 fighting mode"""
         mm.append(p3.menu_manager.MenuManager())
-
-    while True:
-#         pads[0].frame_advance_press()
-        last_frame = state.frame
-        res = next(mw)
-#         print(state.frame - last_frame)
-        if res is not None:
-            sm.handle(*res)
-        if state.frame > last_frame:
-            stats.add_frames(state.frame - last_frame)
-            start = time.time()
-            make_action(state, pads, mm, fox, locations)
-            stats.add_thinking_time(time.time() - start)
+    try:
+        while True:
+    #         pads[0].frame_advance_press()
+            last_frame = state.frame
+            res = next(mw)
+    #         print(state.frame - last_frame)
+            if res is not None:
+                sm.handle(*res)
+            if state.frame > last_frame:
+                stats.add_frames(state.frame - last_frame)
+                start = time.time()
+                locations = make_action(state, pads, mm, fox, locations)
+                stats.add_thinking_time(time.time() - start)
+    except KeyboardInterrupt:
+        tree_path = os.path.dirname(os.path.realpath(__file__)) + "/tree"
+        pickle.dump(locations, open(tree_path, 'wb'), pickle.HIGHEST_PROTOCOL)
+        print('Stopped')
+        print(stats)
 #         pads[0].frame_advance_release()
 
 def make_action(state, pads, mm, fox, locations):
@@ -57,25 +62,28 @@ def make_action(state, pads, mm, fox, locations):
         #locations = fox.advance(state, pads[0], 0, 1, locations)
         locations = fox[0].advance(state=state, pad=pads[0], player_num=0, opponent_num=1, locations=locations)
         locations = fox[1].advance(state=state, pad=pads[1], player_num=1, opponent_num=0, locations=locations)
-        locations = fox[2].advance(state=state, pad=pads[2], player_num=2, opponent_num=3, locations=locations)
+        #locations = fox[2].advance(state=state, pad=pads[2], player_num=2, opponent_num=3, locations=locations)
         locations = fox[3].advance(state=state, pad=pads[3], player_num=3, opponent_num=2, locations=locations)
         if state.frame % 1000 == 0:
-            average_reward = 0
+            average_reward = []
+            for _ in range(4):
+                average_reward.append(0)
             distinct_states = 0
             sds = 0
             epsilon = 0
+            i = 0
             for singlefox in fox:
-                average_reward = average_reward + (singlefox.reward/4)
+                average_reward[i] = average_reward[i] + (singlefox.reward)
                 distinct_states = singlefox.locations.size
                 sds = sds + singlefox.total_sds
                 epsilon = singlefox.count
                 singlefox.reward = 0
                 singlefox.total_sds = 0
-#           ['Frame Number']+['Distinct States']+['Average Reward']+['SDs per 1000 States']+['Epsilon']
+                i = i + 1
             path = os.path.dirname(os.path.realpath(__file__)) + "/stats.csv"
             with open(path, 'a', newline='') as csvfile:
                 writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
-                writer.writerow([state.frame]+[distinct_states]+[average_reward/1000]+[sds]+[epsilon])
+                writer.writerow([state.frame]+[distinct_states]+[average_reward[0]/1000]+[average_reward[1]/1000]+[average_reward[2]/1000]+[average_reward[3]/1000]+[sds]+[epsilon])
                 csvfile.close()
     elif state.menu == p3.state.Menu.Characters:
         if mm[0].dual_1v1_ready == False:
@@ -88,14 +96,16 @@ def make_action(state, pads, mm, fox, locations):
                     mm[0].change_color(state, pads[0], 0)
                 if mm[1].changed_color == False:
                     mm[1].change_color(state, pads[1], 1)
-                if mm[0].changed_color and mm[1].changed_color and mm[0].pressed_start == False:
+                if mm[2].changed_cpu == False:
+                    mm[2].change_cpu(state, pads[2], 2)
+                if mm[0].changed_color and mm[1].changed_color and mm[2].changed_cpu and mm[0].pressed_start == False:
                         pads[0].press_button(p3.pad.Button.START)
                         mm[0].pressed_start = True
                 elif mm[0].pressed_start:
                     for pad in pads:
                         pad.reset()
-                elif mm[0].changed_color and mm[1].changed_color:
-                    mm[0].global_menu_state = mm[0].global_menu_state + 1
+#                 elif mm[0].changed_color and mm[1].changed_color and mm[0].pressed_start:
+#                     mm[0].global_menu_state = mm[0].global_menu_state + 1
             else:
                 for i in range(1,4):
                     if mm[i].selected_falcon == False:
@@ -111,7 +121,7 @@ def make_action(state, pads, mm, fox, locations):
         for pad in pads:
             for m in mm:
                 m.press_start_lots(state, pad)
-
+    return locations
 
 
 def main():
@@ -124,33 +134,32 @@ def main():
     sm = p3.state_manager.StateManager(state)
     write_locations(dolphin_dir, sm.locations())
     stats = p3.stats.Stats()
+    tree_path = os.path.dirname(os.path.realpath(__file__)) + "/tree"
     try:
-        print("dolphin-emu --exec=/home/20XX.iso")
-#         if os.path.isdir("/Users/Robert/Documents/docker/smash"):
-#             dolphin.run(iso_path="/Users/Robert/Documents/docker/smash/20XX.iso", render=False, debug=False)
-#         else:
-#             dolphin.run(iso_path="/home/20XX.iso", render=False, debug=False
-        mw_path = dolphin_dir + '/MemoryWatcher/MemoryWatcher'
-        path = os.path.dirname(os.path.realpath(__file__)) + "/stats.csv"
-        
-        with p3.memory_watcher.MemoryWatcher(mw_path) as mw, \
-            p3.pad.Pad(dolphin.pads[0]) as pad1, \
+        locations = pickle._load(open(tree_path, 'rb'))
+    except EOFError:
+        locations  = {}
+
+    if os.path.isdir("/Users/Robert/Documents/docker/smash"):
+        dolphin.run(iso_path="/Users/Robert/Documents/docker/smash/20XX.iso", render=False, debug=False)
+    else:
+        dolphin.run(iso_path="/home/20XX.iso")
+    mw_path = dolphin_dir + '/MemoryWatcher/MemoryWatcher'
+    path = os.path.dirname(os.path.realpath(__file__)) + "/stats.csv"
+    
+    with p3.memory_watcher.MemoryWatcher(mw_path) as mw:
+        with p3.pad.Pad(dolphin.pads[0]) as pad1, \
             p3.pad.Pad(dolphin.pads[1]) as pad2, \
             p3.pad.Pad(dolphin.pads[2]) as pad3, \
             p3.pad.Pad(dolphin.pads[3]) as pad4, \
             open(path, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
-            writer.writerow(['Frame Number']+['Distinct States']+['Average Reward']+['SDs per 1000 States']+['Epsilon'])
+            writer.writerow(['Frame Number']+['Distinct States']+['Reward 1']+['Reward 2']+['Reward 3']+['Reward 4']+['SDs per 1000 States']+['Epsilon'])
             csvfile.close()
             fox = []
-            for _ in range(0,4):
+            for _ in range(4):
                 fox.append(p3.fox.Fox())
-                 
-            run(fox=fox, state=state, sm=sm, mw=mw, pads=[pad1, pad2, pad3, pad4], stats=stats, locations={})
-        
-    except KeyboardInterrupt:
-        print('Stopped')
-        print(stats)
-
+            run(fox=fox, state=state, sm=sm, mw=mw, pads=[pad1, pad2, pad3, pad4], stats=stats, locations=locations)
+    
 if __name__ == '__main__':
     main()
