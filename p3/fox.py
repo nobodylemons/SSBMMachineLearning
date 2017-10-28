@@ -25,7 +25,7 @@ class Fox:
         location_str_arr = self.get_location_str_arr(self.op_x, self.op_y, self.pl_x, self.pl_y, self.pl_facing, self.op_facing, self.opponent_percent, self.op_action_state, self.pl_action_state, self.op_vel_x, self.op_vel_y, False)
         self.locations.add(location_str_arr, p3.sample.sample())
 #         self.locations_len = self.locations.__len__()
-        self.count = 1
+        self.count = 10
         function_names = [func for func in dir(p3.actions.Actions) if callable(getattr(p3.actions.Actions, func)) and not func.startswith('_')]
         self.a = []
         for name in function_names:
