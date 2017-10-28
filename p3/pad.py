@@ -28,7 +28,7 @@ class Stick(enum.Enum):
 
 class Pad:
     """Writes out controller inputs."""
-    def __init__(self, path):
+    def __init__(self, path, tcp=False):
         """Create, but do not open the fifo."""
         self.pipe = None
         self.path = path
@@ -36,6 +36,7 @@ class Pad:
             if not os.path.exists(path):
                 os.mkfifo(self.path)
         except OSError:
+            print("Pipe Error")
             pass
 
     def __enter__(self):

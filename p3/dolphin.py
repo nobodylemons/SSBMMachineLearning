@@ -11,6 +11,7 @@ class Dolphin:
         self.logger = logger
         self.process = None
         config_path = self.get_dolphin_home_path()
+#         config_path = "/root/"
         mem_watcher_path = config_path + "MemoryWatcher/"
         pipes_path = config_path + "Pipes/"
 
@@ -58,6 +59,7 @@ class Dolphin:
         
         path = os.path.dirname(os.path.realpath(__file__))
         shutil.copy(path + "/GCPadNew.ini", self.get_dolphin_config_path())
+        shutil.copy(path + "/Dolphin.ini", self.get_dolphin_config_path())
         
 #         if controllertype == enums.ControllerType.STANDARD:
 #             pipe_slot = str(port-1)
@@ -115,11 +117,11 @@ class Dolphin:
 #             config.write(dolphinfile)
 
     """Run dolphin-emu"""
-    def run(self, render=True, iso_path=None, movie_path=None, debug=False):
+    def run(self, render=True, iso_path=None, movie_path=None, debug=False, user=False):
         if os.path.isdir('/Applications/Dolphin.app/Contents/MacOS'):
             command = ["/Applications/Dolphin.app/Contents/MacOS/Dolphin"]
         else:
-            command = ["dolphin-emu-headless"]
+            command = ["/usr/local/bin/dolphin-emu-headless"]
         
         if not render:
             #Use the "Null" renderer
@@ -133,6 +135,11 @@ class Dolphin:
             command.append(iso_path)
         if debug:
             command.append("-d")
+        if user:
+            command.append("-u")
+#             command.append("/usr/local/share/dolphin-emu/sys")
+            command.append("/tmp")
+        print(command)
         self.process = subprocess.Popen(command)
         
 
@@ -143,6 +150,7 @@ class Dolphin:
 
     """Return the path to dolphin's home directory"""
     def get_dolphin_home_path(self):
+        return "/tmp/"
         if os.path.isdir("/Applications"):
             home_path = pwd.getpwuid(os.getuid()).pw_dir
         else:
@@ -159,7 +167,8 @@ class Dolphin:
             return osx_path
 
         #Are we on a new Linux distro?
-        linux_path = home_path + "/local/share/dolphin-emu/sys/";
+        #linux_path = home_path + "/local/share/dolphin-emu/sys/";
+        linux_path = "/root/"
         if os.path.isdir(linux_path):
             return linux_path
 
@@ -171,6 +180,7 @@ class Dolphin:
     """ Return the path to dolphin's config directory
             (which is not necessarily the same as the home path)"""
     def get_dolphin_config_path(self):
+        return "/tmp/Config/"
         home_path = pwd.getpwuid(os.getuid()).pw_dir
         legacy_config_path = home_path + "/.dolphin-emu/";
 
@@ -195,7 +205,7 @@ class Dolphin:
 
     """Get the path of the named pipe input file for the given controller port"""
     def get_dolphin_pipes_path(self, port):
-        return self.get_dolphin_home_path() + "/Pipes/Bot" + str(port)
+        return self.get_dolphin_home_path() + "/Pipes/Bot" + str(port)  
 
     """Get the MemoryWatcher socket path"""
     def get_memory_watcher_socket_path(self):

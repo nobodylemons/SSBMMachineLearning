@@ -50,7 +50,10 @@ class MenuManager:
             #-10, -3.4
             self.changed_color = self.press_a(state, pad, player_num, self.changed_color, -10, -3.4)
     def change_cpu(self, state, pad, player_num):
-        self.changed_cpu = self.press_a(state, pad, player_num, self.changed_color, -1.5, -2)
+        if player_num == 2:
+            self.changed_cpu = self.press_a(state, pad, player_num, self.changed_color, -1.5, -2)
+        if player_num == 1:
+            self.changed_cpu = self.press_a(state, pad, player_num, self.changed_color, -31.8, -2)
             
     def press_a(self, state, pad, player_num, self_bool, target_x, target_y):
         if self_bool:
@@ -159,3 +162,5 @@ class MenuManager:
             pad.press_button(p3.pad.Button.START)
         else:
             pad.release_button(p3.pad.Button.START)
+
+    

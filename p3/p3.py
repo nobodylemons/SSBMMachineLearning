@@ -2,7 +2,6 @@ import time
 import csv
 import os
 import p3.fox
-import p3.memory_watcher
 import p3.menu_manager
 import p3.pad
 import p3.state
@@ -10,11 +9,13 @@ import p3.state_manager
 import p3.stats
 import p3.dolphin
 import pickle
+from . import memory_watcher
+from .pad import *
 
 
 def find_dolphin_dir():
     """Attempts to find the dolphin user directory. None on failure."""
-    candidates = ['~/.dolphin-emu','~/Library/Application Support/Dolphin', '/usr/local/share/dolphin-emu/sys']
+    candidates = ['~/.dolphin-emu','~/Library/Application Support/Dolphin','/tmp','/usr/local/share/dolphin-emu/sys']
     for candidate in candidates:
         path = os.path.expanduser(candidate)
         if os.path.isdir(path):
@@ -32,39 +33,51 @@ def write_locations(dolphin_dir, locations):
             print('Could not detect dolphin directory.')
             return
 
-def run(fox, state, sm, mw, pads, stats, locations):
+def run(fox, state, sm, mw, pads, stats, sarsa, alpha, highstates, sd):
     mm = []
     for _ in range(4):
         """Menu manager is the object used to select characters and set dual 1v1 fighting mode"""
         mm.append(p3.menu_manager.MenuManager())
     try:
+        tree_path = os.path.dirname(os.path.realpath(__file__)) + "/tree"
+        locations = p3.location_structure.LocationStruct()
         while True:
-    #         pads[0].frame_advance_press()
             last_frame = state.frame
-            res = next(mw)
-    #         print(state.frame - last_frame)
-            if res is not None:
-                sm.handle(*res)
+            messages = mw.get_messages()
+            for message in messages:
+                sm.handle(*message)
+                
+            #Every 1000 frames, check for pause directory
+            if state.frame % 1000 == 0:
+                is_write = os.path.isdir(os.path.dirname(os.path.realpath(__file__))+"/write")
+                if state.frame % 1000000 == 0 or is_write:
+                    print(tree_path, locations.size)
+                    pickle.dump(locations, open(tree_path, 'wb'), pickle.HIGHEST_PROTOCOL)
+                    if is_write:
+                        os.rmdir(os.path.dirname(os.path.realpath(__file__))+"/write")
+                    
             if state.frame > last_frame:
                 stats.add_frames(state.frame - last_frame)
                 start = time.time()
-                locations = make_action(state, pads, mm, fox, locations)
+                locations = make_action(state, pads, mm, fox, locations, sarsa, alpha, highstates, sd)
                 stats.add_thinking_time(time.time() - start)
+            mw.advance()
+                
+                
+                
     except KeyboardInterrupt:
-        tree_path = os.path.dirname(os.path.realpath(__file__)) + "/tree"
-        pickle.dump(locations, open(tree_path, 'wb'), pickle.HIGHEST_PROTOCOL)
         print('Stopped')
         print(stats)
 #         pads[0].frame_advance_release()
 
-def make_action(state, pads, mm, fox, locations):
+def make_action(state, pads, mm, fox, locations, sarsa, alpha, highstates, sd):
     if state.menu == p3.state.Menu.Game:
-        #locations = fox.advance(state, pads[0], 0, 1, locations)
-        locations = fox[0].advance(state=state, pad=pads[0], player_num=0, opponent_num=1, locations=locations)
-        locations = fox[1].advance(state=state, pad=pads[1], player_num=1, opponent_num=0, locations=locations)
-        #locations = fox[2].advance(state=state, pad=pads[2], player_num=2, opponent_num=3, locations=locations)
-        locations = fox[3].advance(state=state, pad=pads[3], player_num=3, opponent_num=2, locations=locations)
-        if state.frame % 1000 == 0:
+#         locations = fox[0].advance(state=state, pad=pads[0], player_num=0, opponent_num=1, locations=locations)
+        locations = fox[1].advance(state=state, pad=pads[1], player_num=1, opponent_num=0, locations=locations, sarsa=sarsa, alpha=alpha, highstates=highstates, sd=sd)
+#         locations = fox[2].advance(state=state, pad=pads[2], player_num=2, opponent_num=3, locations=locations)
+        locations = fox[3].advance(state=state, pad=pads[3], player_num=3, opponent_num=2, locations=locations, sarsa=sarsa, alpha=alpha, highstates=highstates, sd=sd)
+        divideby = 10000
+        if state.frame % divideby == 0:
             average_reward = []
             for _ in range(4):
                 average_reward.append(0)
@@ -83,7 +96,7 @@ def make_action(state, pads, mm, fox, locations):
             path = os.path.dirname(os.path.realpath(__file__)) + "/stats.csv"
             with open(path, 'a', newline='') as csvfile:
                 writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
-                writer.writerow([state.frame]+[distinct_states]+[average_reward[0]/1000]+[average_reward[1]/1000]+[average_reward[2]/1000]+[average_reward[3]/1000]+[sds]+[epsilon])
+                writer.writerow([state.frame]+[distinct_states]+[average_reward[0]/divideby]+[average_reward[1]/divideby]+[average_reward[2]/divideby]+[average_reward[3]/divideby]+[sds]+[epsilon])
                 csvfile.close()
     elif state.menu == p3.state.Menu.Characters:
         if mm[0].dual_1v1_ready == False:
@@ -98,6 +111,8 @@ def make_action(state, pads, mm, fox, locations):
                     mm[1].change_color(state, pads[1], 1)
                 if mm[2].changed_cpu == False:
                     mm[2].change_cpu(state, pads[2], 2)
+                if mm[1].changed_cpu == False:
+                    mm[1].change_cpu(state, pads[1], 1)
                 if mm[0].changed_color and mm[1].changed_color and mm[2].changed_cpu and mm[0].pressed_start == False:
                         pads[0].press_button(p3.pad.Button.START)
                         mm[0].pressed_start = True
@@ -124,7 +139,7 @@ def make_action(state, pads, mm, fox, locations):
     return locations
 
 
-def main():
+def main(sarsa=False, alpha = .01, highstates = False, sd = False):
     dolphin = p3.dolphin.Dolphin()
     dolphin_dir = find_dolphin_dir()
     if dolphin_dir is None:
@@ -134,32 +149,60 @@ def main():
     sm = p3.state_manager.StateManager(state)
     write_locations(dolphin_dir, sm.locations())
     stats = p3.stats.Stats()
-    tree_path = os.path.dirname(os.path.realpath(__file__)) + "/tree"
-    try:
-        locations = pickle._load(open(tree_path, 'rb'))
-    except EOFError:
-        locations  = {}
 
     if os.path.isdir("/Users/Robert/Documents/docker/smash"):
         dolphin.run(iso_path="/Users/Robert/Documents/docker/smash/20XX.iso", render=False, debug=False)
     else:
-        dolphin.run(iso_path="/home/20XX.iso")
+        dolphin.run(iso_path="/home/root/20XX.iso", user=True)
     mw_path = dolphin_dir + '/MemoryWatcher/MemoryWatcher'
-    path = os.path.dirname(os.path.realpath(__file__)) + "/stats.csv"
+    stats_path = os.path.dirname(os.path.realpath(__file__)) + "/stats.csv"
+    mwType = memory_watcher.MemoryWatcherZMQ
+    mw = mwType(path=mw_path)
     
-    with p3.memory_watcher.MemoryWatcher(mw_path) as mw:
-        with p3.pad.Pad(dolphin.pads[0]) as pad1, \
-            p3.pad.Pad(dolphin.pads[1]) as pad2, \
-            p3.pad.Pad(dolphin.pads[2]) as pad3, \
-            p3.pad.Pad(dolphin.pads[3]) as pad4, \
-            open(path, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
-            writer.writerow(['Frame Number']+['Distinct States']+['Reward 1']+['Reward 2']+['Reward 3']+['Reward 4']+['SDs per 1000 States']+['Epsilon'])
-            csvfile.close()
-            fox = []
-            for _ in range(4):
-                fox.append(p3.fox.Fox())
-            run(fox=fox, state=state, sm=sm, mw=mw, pads=[pad1, pad2, pad3, pad4], stats=stats, locations=locations)
     
+    with p3.pad.Pad(dolphin.pads[0]) as pad1, \
+        p3.pad.Pad(dolphin.pads[1]) as pad2, \
+        p3.pad.Pad(dolphin.pads[2]) as pad3, \
+        p3.pad.Pad(dolphin.pads[3]) as pad4, \
+        open(stats_path, 'w', newline='') as csvfile:
+#         pads = get_pads()
+        pads = [pad1, pad2, pad3, pad4]
+        writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(['Frame Number']+['Distinct States']+['Reward 1']+['Reward 2']+['Reward 3']+['Reward 4']+['SDs per 10000 States']+['Epsilon'])
+        csvfile.close()
+        fox = []
+        for _ in range(4):
+            fox.append(p3.fox.Fox())
+        
+        run(fox=fox, state=state, sm=sm, mw=mw, pads=pads, stats=stats, sarsa=sarsa, alpha=alpha, highstates=highstates, sd=sd)
+
+def mergeTwo(tree1, tree2):
+    if not tree1:
+        return tree2
+    if not tree2:
+        return tree1
+    all_locations_tree1 = tree1.all_locations
+    for location1 in all_locations_tree1:
+        if tree2.__contains__(location1):
+            tree2obj = tree2.get(location1)
+            tree1obj = tree2.get(location1)
+            for i in range(tree1obj.q_arr.__len__()):
+                tree1weight = tree1obj.weight_arr[i]
+                tree2weight = tree2obj.weight_arr[i]
+                weightTotal = tree1weight + tree2weight
+                finalq = 0
+                if weightTotal is not 0:
+                    finalq = (tree1obj.q_arr[i]*tree1weight + tree2obj.q_arr[i]*tree2weight)/weightTotal
+                tree2obj.q_arr[i]=finalq
+                tree2obj.weight_arr[i]=weightTotal
+        else:
+            tree2.add(location1,tree1.get(location1))
+    return tree2
+
 if __name__ == '__main__':
-    main()
+#     main.main()
+#     main.main(sarsa=True)
+#     main.main(alpha=.0001)
+#     main.main(alpha=.1)
+    main.main(highstates=True)
+#     main.main(sd=True)

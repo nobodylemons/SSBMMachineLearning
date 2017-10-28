@@ -1,6 +1,49 @@
 import binascii
 import os
 import socket
+import sys
+from . import util
+
+def parseMessage(message):
+    lines = message.splitlines()
+    
+    assert(len(lines) % 2 == 0)
+    
+    diffs = util.chunk(lines, 2)
+      
+    for diff in diffs:
+        diff[1] = binascii.unhexlify(diff[1].zfill(8))
+    return diffs
+
+class MemoryWatcherZMQ:
+    def __init__(self, path=None, port=None):
+        try:
+            import zmq
+        except ImportError as err:
+            print("ImportError: {0}".format(err))
+            sys.exit("Need zmq installed.")
+        context = zmq.Context()
+        self.socket = context.socket(zmq.REP)
+        if path:
+            print("Binding socket to correct path")
+            self.socket.bind("ipc://" + path)
+        elif port:
+            self.socket.bind("tcp://127.0.0.1:%d" % port)
+        else:
+            raise Exception("Must specify path or port.")
+    
+        self.messages = None
+  
+    def get_messages(self):
+        if self.messages is None:
+            message = self.socket.recv()
+            message = message.decode('utf-8')
+            self.messages = parseMessage(message)
+        return self.messages
+  
+    def advance(self):
+        self.socket.send(b'')
+        self.messages = None
 
 class MemoryWatcher:
     """Reads and parses game memory changes.

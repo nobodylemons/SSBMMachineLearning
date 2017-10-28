@@ -4,7 +4,6 @@ Created on Sep 7, 2017
 
 @author: Robert
 '''
-from tensorflow.contrib.keras.python.keras.backend import function
 
 class sample(object):
     '''
@@ -20,9 +19,11 @@ class sample(object):
         #Each resulting state associated with an action will have a counter
 #         self.states_I_point_to = []
 #         self.states_that_point_to_me = []
+        self.weight_arr = []
         self.q_arr = []
         for _ in function_names:
             self.q_arr.append(0)
+            self.weight_arr.append(0)
 #         for _ in function_names:
 #             self.states_I_point_to.append(0)
 #             self.states_that_point_to_me.append(0)
